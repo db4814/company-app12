@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据调度导出中心 - 能源装备企业管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+        .step-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        .field-group {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .field-subgroup {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 4px solid #667eea;
+        }
+        .company-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .export-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        .form-check-label {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        .form-check-label:hover {
+            background: #e9ecef;
+        }
+        .selected-count {
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        .collapse-section {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .collapse-header {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            cursor: pointer;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .collapse-header:hover {
+            background: #e9ecef;
+        }
+        .collapse-content {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+        }
+        .time-comparison {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <!-- 页面标题 -->
+        <div class="header-section">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-6 fw-bold">
+                        <i class="fas fa-download me-3"></i>
+                        数据调度导出中心
+                    </h1>
+                    <p class="lead mb-0">灵活选择数据字段，一键导出企业信息报表</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/" class="btn btn-light btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>返回总览
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤1：选择企业 -->
+        <div class="card step-card">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex align-items-center">
+                    <div class="step-number">1</div>
+                    <h5 class="mb-0">选择企业</h5>
+                    <span id="selectedCompaniesCount" class="selected-count ms-2">0</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="selectAllCompanies" onchange="toggleAllCompanies()">
+                            <label class="form-check-label fw-bold" for="selectAllCompanies">
+                                全选所有企业
+                            </label>
+                        </div>
+                        <div class="company-list">
+                            {% for company in companies %}
+                            <div class="form-check">
+                                <input class="form-check-input company-checkbox" type="checkbox" 
+                                       value="{{ company.id }}" id="company{{ company.id }}"
+                                       onchange="updateSelectedCount()">
+                                <label class="form-check-label w-100" for="company{{ company.id }}">
+                                    {{ company.name }}
+                                </label>
+                            </div>
+                            {% else %}
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-building fa-2x mb-2"></i>
+                                <p>暂无企业数据</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle me-2"></i>选择说明</h6>
+                            <ul class="mb-0 small">
+                                <li>可多选企业进行批量导出</li>
+                                <li>不选择任何企业则导出全部数据</li>
+                                <li>支持跨企业数据对比分析</li>
+                            </ul>
+                        </div>
+                        <div id="selectedCompaniesList" class="mt-3">
+                            <h6>已选企业：</h6>
+                            <div id="selectedList" class="small text-muted">暂无选择</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤2：选择数据字段 -->
+        <div class="card step-card">
+            <div class="card-header bg-success text-white">
+                <div class="d-flex align-items-center">
+                    <div class="step-number">2</div>
+                    <h5 class="mb-0">选择数据字段</h5>
+                    <span id="selectedFieldsCount" class="selected-count ms-2">0</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- 基础信息导出 - 折叠式 -->
+                <div class="collapse-section">
+                    <div class="collapse-header" onclick="toggleCollapse('basicInfoCollapse')">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle me-2 text-primary"></i>
+                            <h6 class="mb-0 fw-bold">基础信息导出</h6>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div id="basicInfoCollapse" class="collapse-content">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="company_name" id="field_company_name">
+                                    <label class="form-check-label" for="field_company_name">企业名称</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="legal_person" id="field_legal_person">
+                                    <label class="form-check-label" for="field_legal_person">法定代表人</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="credit_code" id="field_credit_code">
+                                    <label class="form-check-label" for="field_credit_code">统一信用代码</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="main_products" id="field_main_products">
+                                    <label class="form-check-label" for="field_main_products">主营产品</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="product_model" id="field_product_model">
+                                    <label class="form-check-label" for="field_product_model">产品型号</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="party_secretary" id="field_party_secretary">
+                                    <label class="form-check-label" for="field_party_secretary">党组织书记</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="total_investment" id="field_total_investment">
+                                    <label class="form-check-label" for="field_total_investment">总投资数</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="employee_count" id="field_employee_count">
+                                    <label class="form-check-label" for="field_employee_count">员工总人数</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 时间信息导出 - 折叠式 -->
+                <div class="collapse-section">
+                    <div class="collapse-header" onclick="toggleCollapse('timeInfoCollapse')">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-calendar-alt me-2 text-success"></i>
+                            <h6 class="mb-0 fw-bold">时间信息导出</h6>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div id="timeInfoCollapse" class="collapse-content">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="register_date" id="field_register_date">
+                                    <label class="form-check-label" for="field_register_date">注册时间</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="start_date" id="field_start_date">
+                                    <label class="form-check-label" for="field_start_date">开工时间</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="production_date" id="field_production_date">
+                                    <label class="form-check-label" for="field_production_date">投产时间</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="completion_date" id="field_completion_date">
+                                    <label class="form-check-label" for="field_completion_date">建成时间</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 项目信息导出 - 折叠式 -->
+                <div class="collapse-section">
+                    <div class="collapse-header" onclick="toggleCollapse('projectInfoCollapse')">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-project-diagram me-2 text-warning"></i>
+                            <h6 class="mb-0 fw-bold">项目信息导出</h6>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div id="projectInfoCollapse" class="collapse-content">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="project_description" id="field_project_description">
+                                    <label class="form-check-label" for="field_project_description">项目简介</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="latest_progress" id="field_latest_progress">
+                                    <label class="form-check-label" for="field_latest_progress">最新进度</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input field-checkbox" type="checkbox" 
+                                           value="project_investment" id="field_project_investment">
+                                    <label class="form-check-label" for="field_project_investment">总投资数</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 经济数据精确导出 - 折叠式 -->
+                <div class="collapse-section">
+                    <div class="collapse-header" onclick="toggleCollapse('economicDataCollapse')">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-chart-bar me-2 text-danger"></i>
+                            <h6 class="mb-0 fw-bold">经济数据精确导出</h6>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div id="economicDataCollapse" class="collapse-content">
+                        <!-- 导出数据类型选择 -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">导出数据类型：</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="dataType" id="quarterlyData" value="quarterly" checked>
+                                    <label class="btn btn-outline-primary" for="quarterlyData">季度数据</label>
+                                    
+                                    <input type="radio" class="btn-check" name="dataType" id="annualData" value="annual">
+                                    <label class="btn btn-outline-primary" for="annualData">年度数据</label>
+                                    
+                                    <input type="radio" class="btn-check" name="dataType" id="monthlyData" value="monthly">
+                                    <label class="btn btn-outline-primary" for="monthlyData">月度数据</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 时间选择 -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">年份</label>
+                                <select class="form-select" id="dataYear">
+                                    <option value="2025" selected>2025年</option>
+                                    <option value="2024">2024年</option>
+                                    <option value="2023">2023年</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4" id="quarterSelection">
+                                <label class="form-label">季度</label>
+                                <select class="form-select" id="dataQuarter">
+                                    <option value="1">第一季度</option>
+                                    <option value="2">第二季度</option>
+                                    <option value="3" selected>第三季度</option>
+                                    <option value="4">第四季度</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4" id="monthSelection" style="display: none;">
+                                <label class="form-label">月份</label>
+                                <select class="form-select" id="dataMonth">
+                                    <option value="1">1月</option>
+                                    <option value="2">2月</option>
+                                    <option value="3">3月</option>
+                                    <option value="4">4月</option>
+                                    <option value="5">5月</option>
+                                    <option value="6">6月</option>
+                                    <option value="7">7月</option>
+                                    <option value="8" selected>8月</option>
+                                    <option value="9">9月</option>
+                                    <option value="10">10月</option>
+                                    <option value="11">11月</option>
+                                    <option value="12">12月</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 经济指标选择 - 折叠式 -->
+                        <div class="collapse-section">
+                            <div class="collapse-header" onclick="toggleCollapse('economicIndicatorsCollapse')">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-chart-line me-2 text-info"></i>
+                                    <h6 class="mb-0 fw-bold">经济指标</h6>
+                                </div>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div id="economicIndicatorsCollapse" class="collapse-content">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input economic-checkbox" type="checkbox" 
+                                                   value="output" id="economic_output">
+                                            <label class="form-check-label" for="economic_output">产值(万元)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input economic-checkbox" type="checkbox" 
+                                                   value="tax" id="economic_tax">
+                                            <label class="form-check-label" for="economic_tax">税收(万元)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input economic-checkbox" type="checkbox" 
+                                                   value="investment" id="economic_investment">
+                                            <label class="form-check-label" for="economic_investment">投资(万元)</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input economic-checkbox" type="checkbox" 
+                                                   value="added_value" id="economic_added_value">
+                                            <label class="form-check-label" for="economic_added_value">增加值(万元)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input economic-checkbox" type="checkbox" 
+                                                   value="capacity" id="economic_capacity">
+                                            <label class="form-check-label" for="economic_capacity">产能</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 数据内容选择 - 折叠式 -->
+                        <div class="collapse-section">
+                            <div class="collapse-header" onclick="toggleCollapse('dataContentCollapse')">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-table me-2 text-success"></i>
+                                    <h6 class="mb-0 fw-bold">数据内容</h6>
+                                </div>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div id="dataContentCollapse" class="collapse-content">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input content-checkbox" type="checkbox" 
+                                                   value="expected" id="content_expected">
+                                            <label class="form-check-label" for="content_expected">预计值</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input content-checkbox" type="checkbox" 
+                                                   value="actual" id="content_actual">
+                                            <label class="form-check-label" for="content_actual">实际值</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input content-checkbox" type="checkbox" 
+                                                   value="completion_rate" id="content_completion_rate">
+                                            <label class="form-check-label" for="content_completion_rate">完成率</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 同比增长对比 -->
+                        <div class="time-comparison">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="enableGrowthComparison">
+                                <label class="form-check-label fw-bold" for="enableGrowthComparison">
+                                    启用同比增长对比
+                                </label>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">A时间</label>
+                                    <select class="form-select mb-2" id="comparisonYearA">
+                                        <option value="2024">2024年</option>
+                                        <option value="2023">2023年</option>
+                                    </select>
+                                    <select class="form-select" id="comparisonQuarterA">
+                                        <option value="3">第三季度</option>
+                                        <option value="2">第二季度</option>
+                                        <option value="1">第一季度</option>
+                                        <option value="4">第四季度</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">B时间</label>
+                                    <select class="form-select mb-2" id="comparisonYearB">
+                                        <option value="2025">2025年</option>
+                                        <option value="2024">2024年</option>
+                                    </select>
+                                    <select class="form-select" id="comparisonQuarterB">
+                                        <option value="3">第三季度</option>
+                                        <option value="2">第二季度</option>
+                                        <option value="1">第一季度</option>
+                                        <option value="4">第四季度</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤3：导出设置 -->
+        <div class="card step-card">
+            <div class="card-header bg-warning text-white">
+                <div class="d-flex align-items-center">
+                    <div class="step-number">3</div>
+                    <h5 class="mb-0">导出设置</h5>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">导出格式</label>
+                        <select class="form-select" id="exportFormat">
+                            <option value="excel" selected>Excel 表格 (.xlsx)</option>
+                            <option value="word">Word 文档 (.docx)</option>
+                            <option value="pdf">PDF 文档 (.pdf)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">文件名称</label>
+                        <input type="text" class="form-control" id="fileName" 
+                               value="企业数据导出_{{ now.strftime('%Y%m%d_%H%M%S') }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">导出方式</label>
+                        <div>
+                            <button class="btn btn-primary w-100" onclick="exportAdvancedData()">
+                                <i class="fas fa-rocket me-2"></i>高级导出
+                            </button>
+                            <small class="text-muted">使用新的导出引擎</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导出按钮 -->
+        <div class="text-center mt-4">
+            <button class="btn export-btn btn-lg me-3" onclick="exportData()">
+                <i class="fas fa-download me-2"></i>一键导出
+            </button>
+            <button class="btn btn-secondary btn-lg" onclick="resetSelection()">
+                <i class="fas fa-redo me-2"></i>重选
+            </button>
+        </div>
+
+        <!-- 导出进度提示 -->
+        <div id="exportProgress" class="alert alert-info mt-4" style="display: none;">
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-3" role="status"></div>
+                <div>
+                    <strong>正在生成导出文件...</strong>
+                    <div class="small">请稍候，文件生成完成后将自动下载</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 折叠/展开功能
+        function toggleCollapse(collapseId) {
+            const content = document.getElementById(collapseId);
+            const header = content.previousElementSibling;
+            const icon = header.querySelector('.fa-chevron-down');
+            
+            if (content.style.display === 'none' || !content.style.display) {
+                content.style.display = 'block';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                content.style.display = 'none';
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+
+        // 数据类型切换
+        function setupDataTypeToggle() {
+            const quarterlyRadio = document.getElementById('quarterlyData');
+            const monthlyRadio = document.getElementById('monthlyData');
+            const annualRadio = document.getElementById('annualData');
+            
+            const quarterSelection = document.getElementById('quarterSelection');
+            const monthSelection = document.getElementById('monthSelection');
+            
+            quarterlyRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    quarterSelection.style.display = 'block';
+                    monthSelection.style.display = 'none';
+                }
+            });
+            
+            monthlyRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    quarterSelection.style.display = 'none';
+                    monthSelection.style.display = 'block';
+                }
+            });
+            
+            annualRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    quarterSelection.style.display = 'none';
+                    monthSelection.style.display = 'none';
+                }
+            });
+        }
+
+        // 切换字段组显示
+        function toggleFieldGroup(groupId, isVisible) {
+            const group = document.getElementById(groupId);
+            if (group) {
+                group.style.display = isVisible ? 'block' : 'none';
+            }
+        }
+
+        // 全选企业
+        function toggleAllCompanies() {
+            const selectAll = document.getElementById('selectAllCompanies');
+            const checkboxes = document.querySelectorAll('.company-checkbox');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+            updateSelectedCount();
+        }
+
+        // 更新选择计数
+        function updateSelectedCount() {
+            const companyCheckboxes = document.querySelectorAll('.company-checkbox:checked');
+            const fieldCheckboxes = document.querySelectorAll('.field-checkbox:checked');
+            
+            document.getElementById('selectedCompaniesCount').textContent = companyCheckboxes.length;
+            document.getElementById('selectedFieldsCount').textContent = fieldCheckboxes.length;
+            
+            // 更新已选企业列表
+            const selectedList = document.getElementById('selectedList');
+            if (companyCheckboxes.length > 0) {
+                let listHtml = '';
+                companyCheckboxes.forEach(checkbox => {
+                    const label = document.querySelector(`label[for="${checkbox.id}"]`);
+                    listHtml += `<div class="mb-1">• ${label.textContent}</div>`;
+                });
+                selectedList.innerHTML = listHtml;
+            } else {
+                selectedList.innerHTML = '<span class="text-muted">暂无选择</span>';
+            }
+        }
+
+        // 高级导出功能
+        function exportAdvancedData() {
+            const selectedCompanies = Array.from(document.querySelectorAll('.company-checkbox:checked'))
+                .map(cb => parseInt(cb.value));
+            
+            // 收集基础信息字段
+            const basicFields = Array.from(document.querySelectorAll('#basicInfoCollapse .field-checkbox:checked'))
+                .map(cb => cb.value);
+            
+            // 收集时间信息字段
+            const timeFields = Array.from(document.querySelectorAll('#timeInfoCollapse .field-checkbox:checked'))
+                .map(cb => cb.value);
+            
+            // 收集项目信息字段
+            const projectFields = Array.from(document.querySelectorAll('#projectInfoCollapse .field-checkbox:checked'))
+                .map(cb => cb.value);
+            
+            // 收集经济数据
+            const economicData = {};
+            const economicIndicators = Array.from(document.querySelectorAll('.economic-checkbox:checked'))
+                .map(cb => cb.value);
+            
+            if (economicIndicators.length > 0) {
+                const dataType = document.querySelector('input[name="dataType"]:checked').value;
+                const year = document.getElementById('dataYear').value;
+                const quarter = document.getElementById('dataQuarter').value;
+                const month = document.getElementById('dataMonth').value;
+                const contentTypes = Array.from(document.querySelectorAll('.content-checkbox:checked'))
+                    .map(cb => cb.value);
+                
+                economicIndicators.forEach(indicator => {
+                    economicData[indicator] = {
+                        selected: true,
+                        time_type: dataType,
+                        year: parseInt(year),
+                        quarter: dataType === 'quarterly' ? parseInt(quarter) : null,
+                        month: dataType === 'monthly' ? parseInt(month) : null,
+                        content_types: contentTypes
+                    };
+                });
+            }
+            
+            // 检查是否选择了任何字段
+            const totalFields = basicFields.length + timeFields.length + projectFields.length + economicIndicators.length;
+            if (totalFields === 0) {
+                alert('请至少选择一个数据字段！');
+                return;
+            }
+            
+            // 显示进度提示
+            const progress = document.getElementById('exportProgress');
+            progress.style.display = 'block';
+            
+            const exportData = {
+                company_ids: selectedCompanies,
+                basic_fields: basicFields,
+                time_fields: timeFields,
+                project_fields: projectFields,
+                economic_data: economicData,
+                format: document.getElementById('exportFormat').value,
+                file_name: document.getElementById('fileName').value || `企业数据导出_${new Date().toISOString().slice(0,10)}`
+            };
+            
+            console.log('高级导出数据:', exportData);
+            
+            // 调用新的高级导出API
+            fetch('/api/export_advanced', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(exportData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('导出失败: ' + response.statusText);
+            })
+            .then(blob => {
+                // 创建下载链接
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                
+                // 根据格式设置文件扩展名
+                const format = document.getElementById('exportFormat').value;
+                const extensions = {
+                    'excel': '.xlsx',
+                    'word': '.docx',
+                    'pdf': '.pdf'
+                };
+                
+                a.download = `${exportData.file_name}${extensions[format] || '.xlsx'}`;
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // 隐藏进度提示
+                progress.style.display = 'none';
+                
+                // 显示成功消息
+                showSuccessMessage('导出成功！文件已开始下载。');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                progress.style.display = 'none';
+                alert('导出失败：' + error.message);
+            });
+        }
+
+        // 原有的导出功能保持不变
+        function exportData() {
+            const selectedCompanies = Array.from(document.querySelectorAll('.company-checkbox:checked'))
+                .map(cb => parseInt(cb.value));
+            const selectedFields = Array.from(document.querySelectorAll('.field-checkbox:checked'))
+                .map(cb => cb.value);
+            
+            if (selectedFields.length === 0) {
+                alert('请至少选择一个数据字段！');
+                return;
+            }
+            
+            // 显示进度提示
+            const progress = document.getElementById('exportProgress');
+            progress.style.display = 'block';
+            
+            const exportData = {
+                company_ids: selectedCompanies,
+                fields: selectedFields,
+                format: document.getElementById('exportFormat').value,
+                file_name: document.getElementById('fileName').value || `企业数据导出_${new Date().toISOString().slice(0,10)}`
+            };
+            
+            console.log('导出数据:', exportData);
+            
+            // 调用原有的API端点
+            fetch('/api/export_custom_fields', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(exportData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('导出失败: ' + response.statusText);
+            })
+            .then(blob => {
+                // 创建下载链接
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `${exportData.file_name}.xlsx`;
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // 隐藏进度提示
+                progress.style.display = 'none';
+                
+                // 显示成功消息
+                showSuccessMessage('导出成功！文件已开始下载。');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                progress.style.display = 'none';
+                alert('导出失败：' + error.message);
+            });
+        }
+
+        // 显示成功消息
+        function showSuccessMessage(message) {
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed top-0 start-50 translate-middle-x mt-3';
+            toast.innerHTML = `
+                <div class="toast show" role="alert" style="z-index: 9999">
+                    <div class="toast-header bg-success text-white">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong class="me-auto">成功</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // 重置选择
+        function resetSelection() {
+            // 重置企业选择
+            document.getElementById('selectAllCompanies').checked = false;
+            document.querySelectorAll('.company-checkbox').forEach(cb => cb.checked = false);
+            
+            // 重置所有字段选择
+            document.querySelectorAll('.field-checkbox').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.economic-checkbox').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.content-checkbox').forEach(cb => cb.checked = false);
+            
+            // 重置数据类型选择
+            document.getElementById('quarterlyData').checked = true;
+            document.getElementById('quarterSelection').style.display = 'block';
+            document.getElementById('monthSelection').style.display = 'none';
+            
+            // 重置同比增长对比
+            document.getElementById('enableGrowthComparison').checked = false;
+            
+            // 更新计数
+            updateSelectedCount();
+            
+            alert('所有选择已重置！');
+        }
+
+        // 页面加载初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置数据类型切换
+            setupDataTypeToggle();
+            
+            // 默认隐藏所有折叠内容
+            document.querySelectorAll('.collapse-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // 初始化计数
+            updateSelectedCount();
+        });
+    </script>
+</body>
+</html>

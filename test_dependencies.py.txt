@@ -1,0 +1,15 @@
+print("正在测试依赖包安装情况...")
+
+try:
+    from docx import Document
+    print("✅ python-docx 安装成功！")
+except ImportError as e:
+    print(f"❌ python-docx 安装失败: {e}")
+
+try:
+    from reportlab.lib.pagesizes import A4
+    print("✅ reportlab 安装成功！")
+except ImportError as e:
+    print(f"❌ reportlab 安装失败: {e}")
+
+print("测试完成！")

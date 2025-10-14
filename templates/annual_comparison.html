@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ company.name }} - 年度数据对比</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .comparison-card {
+            margin-bottom: 2rem;
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .card-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+            font-weight: 600;
+        }
+        .data-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .completion-rate {
+            font-weight: bold;
+        }
+        .completion-rate.high {
+            color: #198754;
+        }
+        .completion-rate.medium {
+            color: #fd7e14;
+        }
+        .completion-rate.low {
+            color: #dc3545;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: 600;
+            background-color: #fff;
+            border-bottom-color: #fff;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+        .growth-positive {
+            color: #198754;
+        }
+        .growth-negative {
+            color: #dc3545;
+        }
+        /* 新的表格样式 */
+        .comparison-table th {
+            position: sticky;
+            left: 0;
+            background-color: #f8f9fa;
+            z-index: 1;
+        }
+        .comparison-table thead th:first-child {
+            z-index: 2;
+        }
+        .data-cell {
+            text-align: right;
+            min-width: 120px;
+        }
+        .year-header {
+            background-color: #e9ecef !important;
+            font-weight: 600;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .card {
+                border: 1px solid #000 !important;
+                break-inside: avoid;
+            }
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- 页面标题和导航 -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-1"><i class="fas fa-chart-line me-2"></i>{{ company.name }} - 年度数据对比分析</h2>
+                        <p class="text-muted mb-0">多年度经济数据对比与趋势分析</p>
+                    </div>
+                    <div class="no-print">
+                        <a href="/company/{{ company.id }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>返回企业档案
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 关键指标概览 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card comparison-card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>关键指标概览 ({{ current_year }}年)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-2 col-6">
+                                <div class="stat-card">
+                                    <div class="stat-value text-primary">
+                                        {{ "%.0f"|format(comparison_data.output[current_year].actual) }}
+                                    </div>
+                                    <div class="stat-label">实际产值(万元)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <div class="stat-card">
+                                    <div class="stat-value text-success">
+                                        {{ "%.0f"|format(comparison_data.capacity[current_year].actual) }}
+                                    </div>
+                                    <div class="stat-label">实际产能</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <div class="stat-card">
+                                    <div class="stat-value text-info">
+                                        {{ "%.0f"|format(comparison_data.tax[current_year].actual) }}
+                                    </div>
+                                    <div class="stat-label">实际税收(万元)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <div class="stat-card">
+                                    <div class="stat-value text-warning">
+                                        {{ "%.0f"|format(comparison_data.investment[current_year].actual) }}
+                                    </div>
+                                    <div class="stat-label">实际投资(万元)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <div class="stat-card">
+                                    <div class="stat-value text-danger">
+                                        {{ "%.0f"|format(comparison_data.added_value[current_year].actual) }}
+                                    </div>
+                                    <div class="stat-label">实际增加值(万元)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 col-6">
+                                <div class="stat-card">
+                                    {% set total_completion = 0 %}
+                                    {% set count = 0 %}
+                                    {% for data_type in ['output', 'capacity', 'tax', 'investment', 'added_value'] %}
+                                        {% if comparison_data[data_type][current_year].planned > 0 %}
+                                            {% set completion = (comparison_data[data_type][current_year].actual / comparison_data[data_type][current_year].planned * 100) %}
+                                            {% set total_completion = total_completion + completion %}
+                                            {% set count = count + 1 %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% set avg_completion = (total_completion / count) if count > 0 else 0 %}
+                                    <div class="stat-value {% if avg_completion >= 100 %}text-success{% elif avg_completion >= 80 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ "%.1f"|format(avg_completion) }}%
+                                    </div>
+                                    <div class="stat-label">平均完成率</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详细数据对比表 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card comparison-card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-table me-2"></i>详细数据对比表</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover comparison-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="year-header">年度</th>
+                                        {% for data_type in ['output', 'capacity', 'tax', 'investment', 'added_value'] %}
+                                        <th colspan="3" class="text-center">{{ get_data_type_name(data_type) }}{% if get_data_type_unit(data_type) %} ({{ get_data_type_unit(data_type) }}){% endif %}</th>
+                                        {% endfor %}
+                                    </tr>
+                                    <tr>
+                                        <th class="year-header"></th>
+                                        {% for data_type in ['output', 'capacity', 'tax', 'investment', 'added_value'] %}
+                                        <th class="text-center">计划</th>
+                                        <th class="text-center">实际</th>
+                                        <th class="text-center">完成率</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for year in years %}
+                                    <tr>
+                                        <td class="year-header"><strong>{{ year }}年</strong></td>
+                                        {% for data_type in ['output', 'capacity', 'tax', 'investment', 'added_value'] %}
+                                            {% set planned = comparison_data[data_type][year].planned %}
+                                            {% set actual = comparison_data[data_type][year].actual %}
+                                            {% set completion_rate = (actual / planned * 100) if planned > 0 else 0 %}
+                                            <td class="data-cell">{{ "%.0f"|format(planned) }}</td>
+                                            <td class="data-cell">{{ "%.0f"|format(actual) }}</td>
+                                            <td class="data-cell">
+                                                <span class="completion-rate 
+                                                    {% if completion_rate >= 100 %}high
+                                                    {% elif completion_rate >= 80 %}medium
+                                                    {% else %}low{% endif %}">
+                                                    {{ "%.1f"|format(completion_rate) }}%
+                                                </span>
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据类型选择 -->
+        <div class="row mb-4 no-print">
+            <div class="col-12">
+                <div class="card comparison-card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>数据筛选</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">数据类型</label>
+                                <select class="form-select" id="dataTypeSelect">
+                                    <option value="output">产值数据 (万元)</option>
+                                    <option value="capacity">产能数据</option>
+                                    <option value="tax">税收数据 (万元)</option>
+                                    <option value="investment">投资数据 (万元)</option>
+                                    <option value="added_value">增加值数据 (万元)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">显示选项</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="showTrendLine" checked>
+                                    <label class="form-check-label" for="showTrendLine">显示趋势线</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="showCompletionRate" checked>
+                                    <label class="form-check-label" for="showCompletionRate">显示完成率</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图表展示 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card comparison-card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>年度数据趋势图</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="nav nav-tabs mb-3" id="chartTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="bar-tab" data-bs-toggle="tab" data-bs-target="#bar-chart" type="button" role="tab">柱状图</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="line-tab" data-bs-toggle="tab" data-bs-target="#line-chart" type="button" role="tab">折线图</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="completion-tab" data-bs-toggle="tab" data-bs-target="#completion-chart" type="button" role="tab">完成率</button>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="chartTabsContent">
+                            <div class="tab-pane fade show active" id="bar-chart" role="tabpanel">
+                                <div class="chart-container">
+                                    <canvas id="comparisonBarChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="line-chart" role="tabpanel">
+                                <div class="chart-container">
+                                    <canvas id="comparisonLineChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="completion-chart" role="tabpanel">
+                                <div class="chart-container">
+                                    <canvas id="completionRateChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导出选项 -->
+        <div class="row mt-4 no-print">
+            <div class="col-12">
+                <div class="card comparison-card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="fas fa-download me-2"></i>数据导出</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <button class="btn btn-primary btn-lg" onclick="exportComparisonData()">
+                            <i class="fas fa-file-excel me-2"></i>导出对比报表 (Excel)
+                        </button>
+                        <button class="btn btn-success btn-lg ms-3" onclick="window.print()">
+                            <i class="fas fa-print me-2"></i>打印对比报表
+                        </button>
+                        <button class="btn btn-info btn-lg ms-3" onclick="goToExportCenter()">
+                            <i class="fas fa-external-link-alt me-2"></i>前往导出中心
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 图表数据
+        const years = {{ years | tojson }};
+        const comparisonData = {{ comparison_data | tojson }};
+        const dataTypeNames = {
+            'output': '产值',
+            'capacity': '产能',
+            'tax': '税收', 
+            'investment': '投资',
+            'added_value': '增加值'
+        };
+        const dataTypeUnits = {
+            'output': '万元',
+            'capacity': '',
+            'tax': '万元',
+            'investment': '万元', 
+            'added_value': '万元'
+        };
+
+        let currentDataType = 'output';
+        let barChart, lineChart, completionChart;
+
+        // 初始化图表
+        function initCharts() {
+            updateCharts(currentDataType);
+            
+            // 监听数据类型选择
+            document.getElementById('dataTypeSelect').addEventListener('change', function(e) {
+                currentDataType = e.target.value;
+                updateCharts(currentDataType);
+            });
+        }
+
+        // 更新所有图表
+        function updateCharts(dataType) {
+            updateBarChart(dataType);
+            updateLineChart(dataType);
+            updateCompletionChart(dataType);
+        }
+
+        // 更新柱状图
+        function updateBarChart(dataType) {
+            const ctx = document.getElementById('comparisonBarChart').getContext('2d');
+            
+            if (barChart) {
+                barChart.destroy();
+            }
+            
+            const plannedData = years.map(year => comparisonData[dataType][year].planned);
+            const actualData = years.map(year => comparisonData[dataType][year].actual);
+            
+            barChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: years.map(year => year + '年'),
+                    datasets: [
+                        {
+                            label: '计划' + dataTypeUnits[dataType],
+                            data: plannedData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '实际' + dataTypeUnits[dataType],
+                            data: actualData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: dataTypeNames[dataType] + '年度对比'
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: dataTypeUnits[dataType]
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 更新折线图
+        function updateLineChart(dataType) {
+            const ctx = document.getElementById('comparisonLineChart').getContext('2d');
+            
+            if (lineChart) {
+                lineChart.destroy();
+            }
+            
+            const plannedData = years.map(year => comparisonData[dataType][year].planned);
+            const actualData = years.map(year => comparisonData[dataType][year].actual);
+            
+            lineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: years.map(year => year + '年'),
+                    datasets: [
+                        {
+                            label: '计划' + dataTypeUnits[dataType],
+                            data: plannedData,
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: '实际' + dataTypeUnits[dataType],
+                            data: actualData,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: dataTypeNames[dataType] + '趋势分析'
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: dataTypeUnits[dataType]
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 更新完成率图表
+        function updateCompletionChart(dataType) {
+            const ctx = document.getElementById('completionRateChart').getContext('2d');
+            
+            if (completionChart) {
+                completionChart.destroy();
+            }
+            
+            const completionRates = years.map(year => {
+                const planned = comparisonData[dataType][year].planned;
+                const actual = comparisonData[dataType][year].actual;
+                return planned > 0 ? (actual / planned * 100) : 0;
+            });
+            
+            completionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: years.map(year => year + '年'),
+                    datasets: [{
+                        label: '完成率(%)',
+                        data: completionRates,
+                        backgroundColor: completionRates.map(rate => 
+                            rate >= 100 ? 'rgba(75, 192, 192, 0.6)' :
+                            rate >= 80 ? 'rgba(255, 159, 64, 0.6)' :
+                            'rgba(255, 99, 132, 0.6)'
+                        ),
+                        borderColor: completionRates.map(rate => 
+                            rate >= 100 ? 'rgba(75, 192, 192, 1)' :
+                            rate >= 80 ? 'rgba(255, 159, 64, 1)' :
+                            'rgba(255, 99, 132, 1)'
+                        ),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: dataTypeNames[dataType] + '完成率分析'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: Math.max(...completionRates) * 1.2 || 120,
+                            title: {
+                                display: true,
+                                text: '完成率(%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 导出对比数据 - 修复版
+        function exportComparisonData() {
+            // 显示加载状态
+            const exportBtn = event.target;
+            const originalText = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>导出中...';
+            exportBtn.disabled = true;
+
+            fetch('/api/export_comparison', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    company_id: {{ company.id }}
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('导出失败: ' + response.statusText);
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `{{ company.name }}_年度数据对比_${new Date().toISOString().slice(0,10)}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // 显示成功提示
+                showSuccessMessage('导出成功！文件已开始下载。');
+            })
+            .catch(error => {
+                console.error('导出失败:', error);
+                alert('导出失败: ' + error.message);
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                exportBtn.innerHTML = originalText;
+                exportBtn.disabled = false;
+            });
+        }
+
+        // 显示成功消息
+        function showSuccessMessage(message) {
+            // 创建临时提示元素
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed top-0 start-50 translate-middle-x mt-3';
+            toast.innerHTML = `
+                <div class="toast show" role="alert" style="z-index: 9999">
+                    <div class="toast-header bg-success text-white">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong class="me-auto">成功</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // 前往导出中心
+        function goToExportCenter() {
+            window.location.href = '/export';
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+        });
+    </script>
+</body>
+</html>

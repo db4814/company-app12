@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目信息 - 能源装备企业一企一档管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .header-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 20px 20px;
+        }
+        .company-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+        .company-card:hover {
+            transform: translateY(-5px);
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            min-width: 120px;
+            display: inline-block;
+        }
+        .info-row {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            border-radius: 25px;
+            padding: 8px 20px;
+        }
+        .progress-item {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+        }
+        .badge-status-planning { background-color: #6c757d; }
+        .badge-status-building { background-color: #fd7e14; }
+        .badge-status-production { background-color: #198754; }
+        .badge-status-paused { background-color: #dc3545; }
+        .badge-status-completed { background-color: #0dcaf0; }
+    </style>
+</head>
+<body>
+    <!-- 顶部背景区域 -->
+    <div class="header-bg">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-5 fw-bold">
+                        <i class="fas fa-industry me-3"></i>
+                        能源装备企业一企一档管理系统
+                    </h1>
+                    <p class="lead mb-0">全面掌握企业信息，精准调度经济数据</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="stats-number">{{ company.employee_count or 0 }}</span>
+                    <small>员工人数</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 操作按钮区域 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="action-buttons">
+                    <a href="/company/{{ company.id }}" class="btn back-btn">
+                        <i class="fas fa-arrow-left me-2"></i>返回企业档案
+                    </a>
+                    <a href="/company/{{ company.id }}/economic" class="btn btn-primary">
+                        <i class="fas fa-chart-line me-2"></i>经济数据
+                    </a>
+                    <a href="/company/{{ company.id }}/annual_comparison" class="btn btn-info">
+                        <i class="fas fa-chart-bar me-2"></i>年度对比
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 企业基本信息 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card company-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h2 class="card-title">
+                                <i class="fas fa-building me-2"></i>{{ company.name }} - 项目管理
+                            </h2>
+                            <span class="badge bg-primary fs-6">项目中心</span>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">企业名称：</span> {{ company.name }}
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">法定代表人：</span> {{ company.legal_person or '未填写' }}
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">主营产品：</span> {{ company.main_products or '未填写' }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">党组织书记：</span> {{ company.party_secretary or '未填写' }}
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">总投资：</span> {{ "%.2f"|format(company.total_investment) if company.total_investment else '0' }} 万元
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">员工人数：</span> {{ company.employee_count or '0' }} 人
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 项目信息管理 -->
+        <div class="card company-card">
+            <div class="card-body">
+                <h4 class="card-title mb-4">
+                    <i class="fas fa-project-diagram me-2"></i>项目信息管理
+                </h4>
+
+                {% if project %}
+                <!-- 显示现有项目信息 -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <span class="info-label">项目名称：</span> {{ project.project_name or '未填写' }}
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">项目状态：</span> 
+                            {% if project.project_status == '规划中' %}
+                                <span class="badge badge-status-planning">规划中</span>
+                            {% elif project.project_status == '在建' %}
+                                <span class="badge badge-status-building">在建</span>
+                            {% elif project.project_status == '投产' %}
+                                <span class="badge badge-status-production">投产</span>
+                            {% elif project.project_status == '暂停' %}
+                                <span class="badge badge-status-paused">暂停</span>
+                            {% elif project.project_status == '已完成' %}
+                                <span class="badge badge-status-completed">已完成</span>
+                            {% else %}
+                                <span class="badge bg-secondary">未设置</span>
+                            {% endif %}
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">总投资：</span> {{ "%.2f"|format(project.total_investment) if project.total_investment else '0' }} 万元
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">设计产能：</span> {{ project.design_capacity or '0' }}
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">预计产能：</span> {{ project.expected_capacity or '0' }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <span class="info-label">实际产能：</span> {{ project.actual_capacity or '0' }}
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">预计产值：</span> {{ "%.2f"|format(project.expected_output) if project.expected_output else '0' }} 万元
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">实际产值：</span> {{ "%.2f"|format(project.actual_output) if project.actual_output else '0' }} 万元
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">开始时间：</span> {{ project.start_date or '未设置' }}
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">投产时间：</span> {{ project.production_date or '未设置' }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-row mt-3">
+                    <span class="info-label">项目描述：</span> 
+                    <div class="mt-2 p-3 bg-light rounded">{{ project.project_description or '暂无描述' }}</div>
+                </div>
+
+                <!-- 编辑项目按钮 -->
+                <div class="mt-4">
+                    <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#editProjectModal">
+                        <i class="fas fa-edit me-2"></i>编辑项目信息
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="deleteProject({{ project.id }})">
+                        <i class="fas fa-trash me-2"></i>删除项目
+                    </button>
+                </div>
+
+                {% else %}
+                <!-- 没有项目时显示创建表单 -->
+                <div class="text-center py-5">
+                    <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">暂无项目信息</h4>
+                    <p class="text-muted mb-4">请创建项目以跟踪项目进展和管理项目数据</p>
+                    <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                        <i class="fas fa-plus me-2"></i>创建新项目
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 项目进度更新部分 -->
+        {% if project %}
+        <div class="card company-card mt-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tasks me-2"></i>项目进度更新记录
+                    </h5>
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addProgressModal">
+                        <i class="fas fa-plus me-1"></i>添加进度更新
+                    </button>
+                </div>
+
+                {% if progress_updates %}
+                <div class="progress-updates">
+                    {% for progress in progress_updates %}
+                    <div class="progress-item mb-3 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-2">{{ progress.progress_content }}</h6>
+                                <div class="d-flex">
+                                    <small class="text-muted me-3">
+                                        <i class="fas fa-calendar me-1"></i>更新日期: {{ progress.update_date }}
+                                    </small>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>记录时间: {{ progress.created_date[:10] }}
+                                    </small>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteProgress({{ progress.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-clipboard-list fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">暂无进度更新记录</p>
+                    <p class="text-muted small">点击"添加进度更新"按钮来记录项目进展</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 项目统计信息 -->
+        {% if project %}
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-center bg-light">
+                    <div class="card-body">
+                        <i class="fas fa-money-bill-wave fa-2x text-primary mb-2"></i>
+                        <h5 class="card-title">总投资</h5>
+                        <p class="card-text fs-4 text-primary">{{ "%.2f"|format(project.total_investment) if project.total_investment else '0' }} 万元</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-light">
+                    <div class="card-body">
+                        <i class="fas fa-bolt fa-2x text-success mb-2"></i>
+                        <h5 class="card-title">设计产能</h5>
+                        <p class="card-text fs-4 text-success">{{ project.design_capacity or '0' }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-light">
+                    <div class="card-body">
+                        <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                        <h5 class="card-title">实际产能</h5>
+                        <p class="card-text fs-4 text-info">{{ project.actual_capacity or '0' }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-light">
+                    <div class="card-body">
+                        <i class="fas fa-industry fa-2x text-warning mb-2"></i>
+                        <h5 class="card-title">实际产值</h5>
+                        <p class="card-text fs-4 text-warning">{{ "%.2f"|format(project.actual_output) if project.actual_output else '0' }} 万元</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 创建项目模态框 -->
+    <div class="modal fade" id="createProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus-circle me-2"></i>创建新项目
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createProjectForm">
+                        <input type="hidden" name="company_id" value="{{ company.id }}">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">项目名称 *</label>
+                                <input type="text" class="form-control" name="project_name" required placeholder="请输入项目名称">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">项目状态 *</label>
+                                <select class="form-select" name="project_status" required>
+                                    <option value="">请选择项目状态</option>
+                                    <option value="规划中">规划中</option>
+                                    <option value="在建" selected>在建</option>
+                                    <option value="投产">投产</option>
+                                    <option value="暂停">暂停</option>
+                                    <option value="已完成">已完成</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">总投资（万元）</label>
+                                <input type="number" class="form-control" name="total_investment" step="0.01" value="0" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">设计产能</label>
+                                <input type="text" class="form-control" name="design_capacity" placeholder="例如: 100MW/年">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">预计产能</label>
+                                <input type="text" class="form-control" name="expected_capacity" placeholder="例如: 90MW/年">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">实际产能</label>
+                                <input type="text" class="form-control" name="actual_capacity" placeholder="例如: 85MW/年">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">预计产值（万元）</label>
+                                <input type="number" class="form-control" name="expected_output" step="0.01" value="0" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">实际产值（万元）</label>
+                                <input type="number" class="form-control" name="actual_output" step="0.01" value="0" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">开始时间</label>
+                                <input type="date" class="form-control" name="start_date">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">投产时间</label>
+                                <input type="date" class="form-control" name="production_date">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">项目描述</label>
+                                <textarea class="form-control" name="project_description" rows="4" placeholder="请输入项目详细描述..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="createProject()">创建项目</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑项目模态框 -->
+    <div class="modal fade" id="editProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>编辑项目信息
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editProjectForm">
+                        <input type="hidden" name="company_id" value="{{ company.id }}">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">项目名称 *</label>
+                                <input type="text" class="form-control" name="project_name" value="{{ project.project_name if project else '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">项目状态 *</label>
+                                <select class="form-select" name="project_status" required>
+                                    <option value="规划中" {% if project and project.project_status == '规划中' %}selected{% endif %}>规划中</option>
+                                    <option value="在建" {% if project and project.project_status == '在建' %}selected{% endif %}>在建</option>
+                                    <option value="投产" {% if project and project.project_status == '投产' %}selected{% endif %}>投产</option>
+                                    <option value="暂停" {% if project and project.project_status == '暂停' %}selected{% endif %}>暂停</option>
+                                    <option value="已完成" {% if project and project.project_status == '已完成' %}selected{% endif %}>已完成</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">总投资（万元）</label>
+                                <input type="number" class="form-control" name="total_investment" step="0.01" 
+                                       value="{{ project.total_investment if project and project.total_investment else '0' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">设计产能</label>
+                                <input type="text" class="form-control" name="design_capacity" 
+                                       value="{{ project.design_capacity if project else '' }}" placeholder="例如: 100MW/年">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">预计产能</label>
+                                <input type="text" class="form-control" name="expected_capacity" 
+                                       value="{{ project.expected_capacity if project else '' }}" placeholder="例如: 90MW/年">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">实际产能</label>
+                                <input type="text" class="form-control" name="actual_capacity" 
+                                       value="{{ project.actual_capacity if project else '' }}" placeholder="例如: 85MW/年">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">预计产值（万元）</label>
+                                <input type="number" class="form-control" name="expected_output" step="0.01" 
+                                       value="{{ project.expected_output if project and project.expected_output else '0' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">实际产值（万元）</label>
+                                <input type="number" class="form-control" name="actual_output" step="0.01" 
+                                       value="{{ project.actual_output if project and project.actual_output else '0' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">开始时间</label>
+                                <input type="date" class="form-control" name="start_date" 
+                                       value="{{ project.start_date if project else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">投产时间</label>
+                                <input type="date" class="form-control" name="production_date" 
+                                       value="{{ project.production_date if project else '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">项目描述</label>
+                                <textarea class="form-control" name="project_description" rows="4" placeholder="请输入项目详细描述...">{{ project.project_description if project else '' }}</textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="updateProject()">保存修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加进度模态框 -->
+    <div class="modal fade" id="addProgressModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus me-2"></i>添加项目进度
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addProgressForm">
+                        <input type="hidden" name="project_id" value="{{ project.id if project else '' }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">进度内容 *</label>
+                            <textarea class="form-control" name="progress_content" rows="4" required placeholder="请输入进度更新内容..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">更新日期 *</label>
+                            <input type="date" class="form-control" name="update_date" required value="{{ now().strftime('%Y-%m-%d') if now else '' }}">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-info" onclick="addProgress()">添加进度</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 获取当前日期用于默认值
+        function getCurrentDate() {
+            const now = new Date();
+            return now.toISOString().split('T')[0];
+        }
+
+        // 设置日期输入框的默认值
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInputs = document.querySelectorAll('input[type="date"]');
+            dateInputs.forEach(input => {
+                if (!input.value) {
+                    input.value = getCurrentDate();
+                }
+            });
+        });
+
+        // 创建项目
+        function createProject() {
+            const form = document.getElementById('createProjectForm');
+            const formData = new FormData(form);
+            
+            // 验证必填字段
+            if (!formData.get('project_name') || !formData.get('project_status')) {
+                alert('请填写必填字段（项目名称和项目状态）');
+                return;
+            }
+            
+            const data = {
+                company_id: parseInt(formData.get('company_id')),
+                project_name: formData.get('project_name'),
+                project_description: formData.get('project_description'),
+                total_investment: parseFloat(formData.get('total_investment')) || 0,
+                design_capacity: formData.get('design_capacity'),
+                expected_capacity: formData.get('expected_capacity'),
+                actual_capacity: formData.get('actual_capacity'),
+                expected_output: parseFloat(formData.get('expected_output')) || 0,
+                actual_output: parseFloat(formData.get('actual_output')) || 0,
+                project_status: formData.get('project_status'),
+                start_date: formData.get('start_date'),
+                production_date: formData.get('production_date')
+            };
+            
+            fetch('/api/project', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                if (result.success) {
+                    // 关闭模态框并刷新页面
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('createProjectModal'));
+                    modal.hide();
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('创建失败，请检查控制台错误信息');
+            });
+        }
+
+        // 更新项目
+        function updateProject() {
+            const form = document.getElementById('editProjectForm');
+            const formData = new FormData(form);
+            
+            // 验证必填字段
+            if (!formData.get('project_name') || !formData.get('project_status')) {
+                alert('请填写必填字段（项目名称和项目状态）');
+                return;
+            }
+            
+            const data = {
+                company_id: parseInt(formData.get('company_id')),
+                project_name: formData.get('project_name'),
+                project_description: formData.get('project_description'),
+                total_investment: parseFloat(formData.get('total_investment')) || 0,
+                design_capacity: formData.get('design_capacity'),
+                expected_capacity: formData.get('expected_capacity'),
+                actual_capacity: formData.get('actual_capacity'),
+                expected_output: parseFloat(formData.get('expected_output')) || 0,
+                actual_output: parseFloat(formData.get('actual_output')) || 0,
+                project_status: formData.get('project_status'),
+                start_date: formData.get('start_date'),
+                production_date: formData.get('production_date')
+            };
+            
+            fetch('/api/project', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                if (result.success) {
+                    // 关闭模态框并刷新页面
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editProjectModal'));
+                    modal.hide();
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('更新失败，请检查控制台错误信息');
+            });
+        }
+
+        // 添加进度
+        function addProgress() {
+            const form = document.getElementById('addProgressForm');
+            const formData = new FormData(form);
+            
+            // 验证必填字段
+            if (!formData.get('progress_content') || !formData.get('update_date')) {
+                alert('请填写必填字段（进度内容和更新日期）');
+                return;
+            }
+            
+            const data = {
+                project_id: parseInt(formData.get('project_id')),
+                progress_content: formData.get('progress_content'),
+                update_date: formData.get('update_date')
+            };
+            
+            fetch('/api/progress', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                if (result.success) {
+                    // 关闭模态框并刷新页面
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addProgressModal'));
+                    modal.hide();
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('添加失败，请检查控制台错误信息');
+            });
+        }
+
+        // 删除项目
+        function deleteProject(projectId) {
+            if (confirm('确定要删除这个项目吗？此操作不可恢复。')) {
+                // 这里需要添加删除项目的API
+                alert('删除项目功能正在开发中...');
+            }
+        }
+
+        // 删除进度
+        function deleteProgress(progressId) {
+            if (confirm('确定要删除这个进度记录吗？')) {
+                // 这里需要添加删除进度的API
+                alert('删除进度功能正在开发中...');
+            }
+        }
+    </script>
+</body>
+</html>
+</html>

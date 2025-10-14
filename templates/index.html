@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>能源装备企业一企一档管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .header-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 20px 20px;
+        }
+        .action-buttons .btn {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .company-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+        .company-card:hover {
+            transform: translateY(-5px);
+        }
+        .company-name {
+            color: #2c3e50;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .company-name:hover {
+            color: #3498db;
+        }
+        .stats-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .export-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 25px;
+        }
+        .btn-outline-brown {
+            color: #8B4513;
+            border-color: #8B4513;
+        }
+        .btn-outline-brown:hover {
+            color: white;
+            background-color: #8B4513;
+            border-color: #8B4513;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部背景区域 -->
+    <div class="header-bg">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-5 fw-bold">
+                        <i class="fas fa-industry me-3"></i>
+                        能源装备企业一企一档管理系统
+                    </h1>
+                    <p class="lead mb-0">全面掌握企业信息，精准调度经济数据</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="stats-number">{{ companies|length }}</span>
+                    <small>家入驻企业</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 操作按钮区域 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="action-buttons">
+                    <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addCompanyModal">
+                        <i class="fas fa-plus me-2"></i>添加企业
+                    </button>
+                    <a href="/contacts" class="btn btn-success btn-lg">
+                        <i class="fas fa-address-book me-2"></i>通讯录
+                    </a>
+                    <a href="/export" class="btn export-btn btn-lg text-white">
+                        <i class="fas fa-download me-2"></i>数据调度导出中心
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 企业列表 -->
+        <div class="row">
+            {% for company in companies %}
+            <div class="col-lg-6 col-xl-4">
+                <div class="card company-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="card-title">
+                                <a href="/company/{{ company.id }}" class="company-name">
+                                    {{ company.name }}
+                                </a>
+                            </h5>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCompany({{ company.id }}, '{{ company.name }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="company-info">
+                            <p class="mb-2">
+                                <i class="fas fa-box me-2 text-muted"></i>
+                                <strong>主营产品:</strong> {{ company.main_products or '未填写' }}
+                            </p>
+                            {% if company.contact_phone %}
+                            <p class="mb-2">
+                                <i class="fas fa-phone me-2 text-muted"></i>
+                                <strong>联系电话:</strong> {{ company.contact_phone }}
+                            </p>
+                            {% endif %}
+                            {% if company.employee_count %}
+                            <p class="mb-0">
+                                <i class="fas fa-users me-2 text-muted"></i>
+                                <strong>员工人数:</strong> {{ company.employee_count }}人
+                            </p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-3 pt-3 border-top">
+                            <div class="btn-group w-100">
+                                <a href="/company/{{ company.id }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye me-1"></i>查看档案
+                                </a>
+                                <a href="/company/{{ company.id }}/economic?type=output" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-chart-line me-1"></i>经济数据
+                                </a>
+                                <a href="/company/{{ company.id }}/project" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-project-diagram me-1"></i>项目信息
+                                </a>
+                                <a href="/company/{{ company.id }}/comprehensive" class="btn btn-outline-brown btn-sm">
+                                    <i class="fas fa-chart-bar me-1"></i>企业综合数据
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">暂无企业数据</h4>
+                    <p class="text-muted">点击"添加企业"按钮开始录入企业信息</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 添加企业模态框 -->
+    <div class="modal fade" id="addCompanyModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus-circle me-2"></i>添加新企业
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="companyForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">企业名称 *</label>
+                                <input type="text" class="form-control" name="name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">法定代表人 *</label>
+                                <input type="text" class="form-control" name="legal_person" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">主营产品</label>
+                                <input type="text" class="form-control" name="main_products">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">产品型号</label>
+                                <input type="text" class="form-control" name="product_model">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">党组织书记</label>
+                                <input type="text" class="form-control" name="party_secretary">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">总投资数（万元）</label>
+                                <input type="number" class="form-control" name="total_investment" step="0.01">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">员工总人数</label>
+                                <input type="number" class="form-control" name="employee_count">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">注册时间</label>
+                                <input type="date" class="form-control" name="register_date">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">建成时间</label>
+                                <input type="date" class="form-control" name="completion_date">
+                            </div>
+                        </div>
+
+                        <!-- 联系人信息 -->
+                        <div class="mt-4">
+                            <h6 class="border-bottom pb-2">联系人信息</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">日常联系人姓名</label>
+                                    <input type="text" class="form-control" name="daily_contact_name">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">职位</label>
+                                    <input type="text" class="form-control" name="daily_contact_position">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">电话</label>
+                                    <input type="tel" class="form-control" name="daily_contact_phone">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitCompanyForm()">保存企业</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 提交企业表单
+        function submitCompanyForm() {
+            const form = document.getElementById('companyForm');
+            const formData = new FormData(form);
+            
+            const data = {
+                name: formData.get('name'),
+                legal_person: formData.get('legal_person'),
+                main_products: formData.get('main_products'),
+                product_model: formData.get('product_model'),
+                party_secretary: formData.get('party_secretary'),
+                total_investment: parseFloat(formData.get('total_investment')) || 0,
+                employee_count: parseInt(formData.get('employee_count')) || 0,
+                register_date: formData.get('register_date'),
+                completion_date: formData.get('completion_date'),
+                contacts: []
+            };
+            
+            // 添加日常联系人
+            if (formData.get('daily_contact_name')) {
+                data.contacts.push({
+                    type: 'daily',
+                    name: formData.get('daily_contact_name'),
+                    position: formData.get('daily_contact_position'),
+                    phone: formData.get('daily_contact_phone'),
+                    is_primary: 1
+                });
+            }
+            
+            fetch('/api/company', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(result.message);
+                if (result.success) {
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('添加失败，请检查控制台错误信息');
+            });
+        }
+        
+        // 删除企业
+        function deleteCompany(companyId, companyName) {
+            if (confirm(`确定要删除企业"${companyName}"吗？此操作不可恢复。`)) {
+                fetch('/api/company/' + companyId, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('删除失败：' + error.message);
+                });
+            }
+        }
+        
+        // 表单验证
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('companyForm');
+            const requiredFields = form.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                field.addEventListener('blur', function() {
+                    if (!this.value.trim()) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
