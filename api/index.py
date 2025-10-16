@@ -1,16 +1,22 @@
-from flask import Flask
-app = Flask(__name__)
+from http.server import BaseHTTPRequestHandler
+import json
+import os
 
-# 这里复制您 app.py 中的所有路由和函数
-@app.route('/')
-def index():
-    return '企业管理系统首页'
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b'''
+            <html>
+                <body>
+                    <h1>企业管理系统 - Vercel 测试</h1>
+                    <p>Flask 应用正在运行！</p>
+                    <a href="/login">登录</a>
+                </body>
+            </html>
+        ''')
 
-@app.route('/login')
-def login():
-    return '登录页面'
-
-# 复制您 app.py 中所有的路由...
-
-if __name__ == '__main__':
-    app.run()
+# Vercel 需要的函数入口
+def handler(request):
+    return Handler()
