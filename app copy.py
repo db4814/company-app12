@@ -3,12 +3,8 @@
 print("=== 依赖包测试 ===")
 try:
     from docx import Document
-    from docx import Document
-    from docx.shared import Inches
-    from docx.shared import Pt  # 添加这行
-    from docx.oxml.ns import qn  # 添加这行
-    from reportlab.lib.pagesizes import letter, A4
-# ... 其他import继续
+    from docx.shared import Inches, Pt
+    from docx.oxml.ns import qn
     print("✅ python-docx 安装成功！")
 except ImportError as e:
     print(f"❌ python-docx 安装失败: {e}")
@@ -22,9 +18,6 @@ print("==================")
 
 # 原有的import继续...
 from flask import Flask, render_template, request, jsonify, send_file
-# ... 其他代码
-# 能源装备企业一企一档管理系统 V2.0 - 2025年数据完整版 - 修复版
-from flask import Flask, render_template, request, jsonify, send_file
 import sqlite3
 import os
 import pandas as pd
@@ -32,7 +25,8 @@ import io
 from datetime import datetime
 import json
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches, Pt
+from docx.oxml.ns import qn
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -434,7 +428,7 @@ def annual_comparison(company_id):
 
 @app.route('/company/<int:company_id>/comprehensive')
 def enterprise_comprehensive(company_id):
-    """企业综合数据页面 - 同时显示当月和累计数据"""
+    """企业综合数据页面 - 修复同比增长计算"""
     # 获取月份参数，默认为当前月份
     selected_month = request.args.get('month', type=int, default=datetime.now().month)
     
@@ -475,22 +469,34 @@ def enterprise_comprehensive(company_id):
         ''', (company_id, dt, 2024, selected_month)).fetchone()
         
         # 当月数据
-        current_month_value = monthly_data['current_month_value'] if monthly_data and monthly_data['current_month_value'] else 0
-        last_year_month_value = last_year_monthly['last_year_month_value'] if last_year_monthly and last_year_monthly['last_year_month_value'] else 0
+        current_month_value = monthly_data['current_month_value'] if monthly_data and monthly_data['current_month_value'] is not None else 0
+        last_year_month_value = last_year_monthly['last_year_month_value'] if last_year_monthly and last_year_monthly['last_year_month_value'] is not None else 0
         
-        # 计算当月同比增长率
+        # 修复同比增长率计算
         month_growth_rate = 0
         if last_year_month_value > 0:
             month_growth_rate = ((current_month_value - last_year_month_value) / last_year_month_value) * 100
+        elif last_year_month_value == 0 and current_month_value > 0:
+            month_growth_rate = 100  # 去年为0，今年有值，增长100%
+        elif last_year_month_value == 0 and current_month_value == 0:
+            month_growth_rate = 0    # 两年都为0，增长0%
+        else:
+            month_growth_rate = -100 if current_month_value == 0 else ((current_month_value - last_year_month_value) / abs(last_year_month_value)) * 100
         
         # 累计数据
-        cumulative_value = cumulative_data['cumulative_value'] if cumulative_data and cumulative_data['cumulative_value'] else 0
-        last_year_cumulative_value = last_year_cumulative['last_year_cumulative_value'] if last_year_cumulative and last_year_cumulative['last_year_cumulative_value'] else 0
+        cumulative_value = cumulative_data['cumulative_value'] if cumulative_data and cumulative_data['cumulative_value'] is not None else 0
+        last_year_cumulative_value = last_year_cumulative['last_year_cumulative_value'] if last_year_cumulative and last_year_cumulative['last_year_cumulative_value'] is not None else 0
         
-        # 计算累计同比增长率
+        # 修复累计同比增长率计算
         cumulative_growth_rate = 0
         if last_year_cumulative_value > 0:
             cumulative_growth_rate = ((cumulative_value - last_year_cumulative_value) / last_year_cumulative_value) * 100
+        elif last_year_cumulative_value == 0 and cumulative_value > 0:
+            cumulative_growth_rate = 100  # 去年为0，今年有值，增长100%
+        elif last_year_cumulative_value == 0 and cumulative_value == 0:
+            cumulative_growth_rate = 0    # 两年都为0，增长0%
+        else:
+            cumulative_growth_rate = -100 if cumulative_value == 0 else ((cumulative_value - last_year_cumulative_value) / abs(last_year_cumulative_value)) * 100
         
         comprehensive_data[dt] = {
             'current_month_value': current_month_value,
@@ -498,7 +504,12 @@ def enterprise_comprehensive(company_id):
             'month_growth_rate': month_growth_rate,
             'cumulative_growth_rate': cumulative_growth_rate
         }
-    
+        # 添加调试信息
+    print(f"=== 综合数据调试信息 ===")
+    print(f"企业ID: {company_id}, 月份: {selected_month}")
+    for dt in data_types:
+        print(f"{dt}: {comprehensive_data[dt]}")
+    print("=======================")
     conn.close()
     
     # 月份中文名称
@@ -1184,82 +1195,31 @@ def export_to_excel(data, title):
     )
 
 def export_to_word(data, title):
-    """导出为Word格式 - 修复版"""
-    try:
-        from docx.shared import Pt
-        from docx.oxml.ns import qn
-    except ImportError as e:
-        return jsonify({'message': f'Word导出依赖缺失: {str(e)}', 'success': False})
-    
+    """导出为Word格式 - 简化修复版"""
     document = Document()
-    # 设置文档的默认字体（支持中文）
-    from docx.oxml.ns import qn
-    document.styles['Normal'].font.name = u'宋体'
-    document.styles['Normal']._element.rPr.rFonts.set(qn('w:eastAsia'), u'宋体')
     
-    # 添加主标题
-    title_para = document.add_heading('', level=0)
-    title_run = title_para.add_run(title)
-    title_run.font.name = u'黑体'
-    title_run._element.rPr.rFonts.set(qn('w:eastAsia'), u'黑体')
-    title_run.font.size = docx.shared.Pt(16)
-    title_para.alignment = 1  # 居中
-    
-    # 添加导出时间
-    time_para = document.add_paragraph()
-    time_run = time_para.add_run(f'导出时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
-    time_run.font.name = u'宋体'
-    time_run._element.rPr.rFonts.set(qn('w:eastAsia'), u'宋体')
-    time_para.alignment = 1  # 居中
-    
-    document.add_paragraph()  # 空行
+    # 添加标题
+    document.add_heading(title, 0)
+    document.add_paragraph(f'导出时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+    document.add_paragraph()
     
     if data:
-        # 为每个企业创建详细的文档内容
-        for i, company_data in enumerate(data, 1):
-            # 添加企业标题
-            company_name = company_data.get('企业名称', f'企业{i}')
-            company_heading = document.add_heading('', level=1)
-            company_run = company_heading.add_run(f'{i}. {company_name}')
-            company_run.font.name = u'黑体'
-            company_run._element.rPr.rFonts.set(qn('w:eastAsia'), u'黑体')
-            
-            # 添加企业详细信息
-            info_para = document.add_paragraph()
-            
-            # 组织企业信息
-            info_lines = []
-            for key, value in company_data.items():
-                if key != '企业名称' and value and str(value).strip() and str(value) != '0':
-                    info_lines.append(f"{key}: {value}")
-            
-            if info_lines:
-                for line in info_lines:
-                    line_run = info_para.add_run(f"• {line}\n")
-                    line_run.font.name = u'宋体'
-                    line_run._element.rPr.rFonts.set(qn('w:eastAsia'), u'宋体')
-            else:
-                no_info_run = info_para.add_run('暂无详细信息\n')
-                no_info_run.font.name = u'宋体'
-                no_info_run._element.rPr.rFonts.set(qn('w:eastAsia'), u'宋体')
-            
-            document.add_paragraph()  # 空行
-    
+        # 添加表格
+        table = document.add_table(rows=1, cols=len(data[0].keys()))
+        table.style = 'Table Grid'
+        
+        # 添加表头
+        headers = list(data[0].keys())
+        for i, header in enumerate(headers):
+            table.cell(0, i).text = str(header)
+        
+        # 添加数据行
+        for row_data in data:
+            row_cells = table.add_row().cells
+            for i, key in enumerate(headers):
+                row_cells[i].text = str(row_data.get(key, ''))
     else:
-        # 没有数据的情况
-        no_data_para = document.add_paragraph()
-        no_data_run = no_data_para.add_run('没有找到可导出的企业数据')
-        no_data_run.font.name = u'宋体'
-        no_data_run._element.rPr.rFonts.set(qn('w:eastAsia'), u'宋体')
-    
-    # 添加页脚信息
-    document.add_paragraph()
-    footer_para = document.add_paragraph()
-    footer_run = footer_para.add_run('--- 能源装备企业一企一档管理系统生成 ---')
-    footer_run.font.name = u'宋体'
-    footer_run._element.rPr.rFonts.set(qn('w:eastAsia'), u'宋体')
-    footer_run.font.size = docx.shared.Pt(10)
-    footer_para.alignment = 1  # 居中
+        document.add_paragraph('没有数据可导出')
     
     # 保存到内存
     output = io.BytesIO()
@@ -1276,106 +1236,57 @@ def export_to_word(data, title):
     )
 
 def export_to_pdf(data, title):
-    """导出为PDF格式 - 修复中文乱码"""
+    """导出为PDF格式 - 简化修复版"""
     output = io.BytesIO()
-    
-    # 使用支持中文的字体
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.lib.fonts import addMapping
-    
-    try:
-        # 尝试注册中文字体（需要系统中文字体）
-        pdfmetrics.registerFont(TTFont('SimSun', 'simsun.ttc'))  # 宋体
-        pdfmetrics.registerFont(TTFont('SimHei', 'simhei.ttf'))  # 黑体
-        chinese_font = 'SimSun'
-    except:
-        # 如果系统中没有中文字体，使用默认字体
-        chinese_font = 'Helvetica'
-    
-    doc = SimpleDocTemplate(output, pagesize=A4, topMargin=50, bottomMargin=50)
+    doc = SimpleDocTemplate(output, pagesize=A4)
     elements = []
     
     # 定义样式
     styles = getSampleStyleSheet()
-    
-    # 创建自定义样式（使用中文字体）
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
-        fontName=chinese_font,
         fontSize=16,
-        spaceAfter=20,
-        alignment=1,  # 居中
-        textColor=colors.HexColor('#2c3e50')
+        spaceAfter=30,
+        alignment=1  # 居中
     )
     
-    company_style = ParagraphStyle(
-        'CompanyStyle',
-        parent=styles['Heading2'],
-        fontName=chinese_font,
-        fontSize=12,
-        spaceAfter=10,
-        textColor=colors.HexColor('#34495e')
-    )
-    
-    normal_style = ParagraphStyle(
-        'NormalStyle',
-        parent=styles['Normal'],
-        fontName=chinese_font,
-        fontSize=10,
-        spaceAfter=5,
-        textColor=colors.HexColor('#2c3e50')
-    )
-    
-    footer_style = ParagraphStyle(
-        'FooterStyle',
-        parent=styles['Normal'],
-        fontName=chinese_font,
-        fontSize=8,
-        alignment=1,
-        textColor=colors.HexColor('#7f8c8d')
-    )
-    
-    # 添加主标题
+    # 添加标题
     elements.append(Paragraph(title, title_style))
-    
-    # 添加导出时间
-    elements.append(Paragraph(f'导出时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}', normal_style))
+    elements.append(Paragraph(f'导出时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}', styles['Normal']))
     elements.append(Spacer(1, 20))
     
     if data:
-        # 为每个企业创建详细内容
-        for i, company_data in enumerate(data, 1):
-            # 企业标题
-            company_name = company_data.get('企业名称', f'企业{i}')
-            elements.append(Paragraph(f'{i}. {company_name}', company_style))
-            
-            # 企业详细信息
-            info_lines = []
-            for key, value in company_data.items():
-                if key != '企业名称' and value and str(value).strip() and str(value) != '0':
-                    # 处理长文本，避免PDF换行问题
-                    display_value = str(value)
-                    if len(display_value) > 50:
-                        display_value = display_value[:50] + '...'
-                    info_lines.append(f"• {key}: {display_value}")
-            
-            if info_lines:
-                for line in info_lines:
-                    elements.append(Paragraph(line, normal_style))
-            else:
-                elements.append(Paragraph('暂无详细信息', normal_style))
-            
-            elements.append(Spacer(1, 15))  # 企业之间的间距
-    
+        # 准备表格数据
+        table_data = []
+        
+        # 表头
+        headers = list(data[0].keys())
+        table_data.append(headers)
+        
+        # 数据行
+        for row_data in data:
+            row = [str(row_data.get(key, '')) for key in headers]
+            table_data.append(row)
+        
+        # 创建表格
+        table = Table(table_data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(table)
     else:
-        # 没有数据的情况
-        elements.append(Paragraph('没有找到可导出的企业数据', normal_style))
-    
-    # 添加页脚
-    elements.append(Spacer(1, 30))
-    elements.append(Paragraph('--- 能源装备企业一企一档管理系统生成 ---', footer_style))
+        elements.append(Paragraph('没有数据可导出', styles['Normal']))
     
     # 构建PDF
     doc.build(elements)

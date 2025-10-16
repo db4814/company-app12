@@ -1410,11 +1410,18 @@ def add_sample_data():
     conn.close()
     print("示例数据添加完成！")
 
+# 针对 Vercel 部署的配置
+import os
 if __name__ == '__main__':
     init_db()
     add_sample_data()  # 添加示例数据
     print("=" * 60)
     print("能源装备企业一企一档管理系统 V2.0 - 2025年数据版本 启动成功!")
-    print("访问地址: http://localhost:5000")
+    
+    # Vercel 使用环境变量 PORT，如果没有则默认5000
+    port = int(os.environ.get("PORT", 5000))
+    print(f"访问地址: http://localhost:{port}")
     print("=" * 60)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    
+    # 修改这行：使用环境变量端口，关闭debug模式
+    app.run(debug=False, host='0.0.0.0', port=port)
