@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: company-management  # 您的应用名称
+    env: python
+    plan: free
+    branch: main
+    setupCommands:
+      - pip install -r requirements.txt
+    startCommand: "gunicorn app:app"  # 因为您的主文件是 app.py
