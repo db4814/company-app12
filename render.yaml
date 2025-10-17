@@ -3,5 +3,6 @@ services:
     name: company-management
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    instanceType: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
